@@ -1,0 +1,20 @@
+{
+  "name": "nn",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/transformer/index.ts",
+  "scripts": {
+    "build": "vite build --mode development",
+    "start": "npm run build; node dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.6"
+  }
+}
