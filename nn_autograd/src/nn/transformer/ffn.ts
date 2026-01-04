@@ -1,7 +1,6 @@
 import { addBias } from "../../autograd/ops/addBias";
 import { gelu } from "../../autograd/ops/gelu";
 import { matmul } from "../../autograd/ops/matmul";
-import { RelevanceEngine, SubsystemId } from "../../RelevanceEngine";
 import { Tensor } from "../../Tensor";
 import { config } from "./config";
 
@@ -14,7 +13,6 @@ export class FeedForward {
   b2 = Tensor.randn([config.dModel]);
 
   forward(x: Tensor): Tensor {
-    RelevanceEngine.enter(SubsystemId.ffn);
     // x: [seqLen, dModel]
     const h = matmul("FFN 0", x, this.W1); // matmul op
     const hBias = addBias(h, this.b1); // addBias op

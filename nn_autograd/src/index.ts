@@ -3,11 +3,10 @@ import { Adam } from "./adam";
 import { getParams } from "./nn/transformer/params";
 import { AutogradEngine } from "./autograd/Engine";
 import { crossEntropy } from "./autograd/ops/crossEntropy";
-import { RelevanceEngine } from "./RelevanceEngine";
 
 const model = new MiniTransformer();
 const params = getParams(model);
-const optimizer = new Adam(Object.values(params).flat(), 1e-2);
+const optimizer = new Adam(params, 1e-2);
 
 // tiny deterministic dataset
 const data = [
@@ -24,14 +23,12 @@ for (let step = 0; step < 200; step++) {
     const targets = seq.slice(1); // [2,3,4,5]
 
     AutogradEngine.clear();
-    RelevanceEngine.clear();
 
     const logits = model.forward(inputs);
     const loss = crossEntropy(logits, targets);
     totalLoss += loss.data[0];
 
     AutogradEngine.backward(loss);
-    RelevanceEngine.update(params);
 
     // update
     optimizer.step();

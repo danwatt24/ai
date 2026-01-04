@@ -2,12 +2,10 @@ export class Tensor {
   data: Float32Array;
   grad: Float32Array | null = null;
   shape: number[];
-  relevance: number;
 
   constructor(shape: number[], data?: Float32Array) {
     this.shape = shape;
     this.data = data ?? new Float32Array(shape.reduce((a, b) => a * b));
-    this.relevance = 0;
   }
 
   zeroGrad() {

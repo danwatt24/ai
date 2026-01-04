@@ -1,5 +1,4 @@
 import { embed } from "../../autograd/ops/embeddings";
-import { RelevanceEngine, SubsystemId } from "../../RelevanceEngine";
 import { Tensor } from "../../Tensor";
 
 export class Embeddings {
@@ -12,7 +11,6 @@ export class Embeddings {
   }
 
   forward(tokens: number[]): Tensor {
-    RelevanceEngine.enter(SubsystemId.embed);
     return embed(tokens, this.token, this.position);
   }
 }

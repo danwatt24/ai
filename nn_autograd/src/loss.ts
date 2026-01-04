@@ -1,4 +1,4 @@
-import { Tensor } from "./nn/transformer/tensor";
+import { Tensor } from "./Tensor";
 
 export function crossEntropyWithGrad(
   logits: Tensor,
