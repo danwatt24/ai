@@ -1,6 +1,9 @@
 async function* sendPrompt(prompt: string) {
   const res = await fetch("http://localhost:3000/chat", {
     body: JSON.stringify({ prompt }),
+    headers: {
+      "Content-Type": "application/json",
+    },
     method: "post",
   });
 

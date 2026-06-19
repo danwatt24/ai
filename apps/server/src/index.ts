@@ -2,17 +2,19 @@ import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { cors } from "hono/cors";
 import { streamText } from "hono/streaming";
+import { sendPromptWithContext } from "./llm";
 
 const app = new Hono();
 app.use("*", cors());
 
 app.post("/chat", async (c) => {
   return streamText(c, async (stream) => {
-    const tokens = ["hello", " ", "world", "!"];
+    const { prompt } = await c.req.json<{ prompt: string }>();
+    const resp = await sendPromptWithContext(prompt);
+    const tokens = resp?.split(" ") ?? [];
 
     for (const token of tokens) {
-      await stream.write(token);
-      await new Promise((r) => setTimeout(r, 500));
+      await stream.write(`${token} `);
     }
   });
 });

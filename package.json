@@ -10,7 +10,8 @@
     "create": "node tooling/create-app/index.js",
     "ui": "npm run dev --workspace=chat-ui",
     "server": "npm run dev --workspace=server",
-    "chatbot": "concurrently --kill-others -n server,ui -c blue,green \"npm run server\" \"npm run ui\""
+    "chatbot": "concurrently --kill-others -n server,ui -c blue,green \"npm run server\" \"npm run ui\"",
+    "llama": "llama-server -m ./models/qwen2.5-coder-32b-instruct-q4_k_m.gguf -c 16384 -ngl 99 -t 4 -tb 4 -fa on --port 8080"
   },
   "repository": {
     "type": "git",
