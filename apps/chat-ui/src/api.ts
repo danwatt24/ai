@@ -1,5 +1,7 @@
+const baseUrl = "http://localhost:3000";
+
 async function* sendPrompt(prompt: string) {
-  const res = await fetch("http://localhost:3000/chat", {
+  const res = await fetch(`${baseUrl}/chat`, {
     body: JSON.stringify({ prompt }),
     headers: {
       "Content-Type": "application/json",
@@ -18,6 +20,15 @@ async function* sendPrompt(prompt: string) {
   }
 }
 
+async function getContext<T>() {
+  const res = await fetch(`${baseUrl}/context`, {
+    method: "get",
+  });
+
+  return (await res.json()) as T;
+}
+
 export default {
   sendPrompt,
+  getContext,
 };

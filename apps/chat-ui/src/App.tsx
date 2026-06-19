@@ -6,6 +6,8 @@ import Footer from "@components/Footer";
 import MainContent from "@components/MainContent";
 import Header from "@components/Header";
 import Sidebar from "@components/Sidebar";
+import api from "./api";
+import { type ChatMessage } from "@repo/shared";
 
 type Message = {
   id: string;
@@ -13,13 +15,24 @@ type Message = {
   content: string;
 };
 
-import api from "./api";
+function isVisibleMessage(msg: ChatMessage): msg is Omit<Message, "id"> {
+  return msg.role === "user" || msg.role === "assistant";
+}
 
 export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+
+  useEffect(() => {
+    api.getContext<ChatMessage[]>().then((msg) => {
+      const messages = msg
+        .filter(isVisibleMessage)
+        .map((m) => ({ ...m, id: crypto.randomUUID() as string }));
+      setMessages(messages);
+    });
+  }, []);
 
   const sendPrompt = async () => {
     const cleaned = input.trim();
