@@ -2,9 +2,11 @@
   "name": "server",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch --clear-screen=false src/index.ts"
+    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@repo/shared": "*",
     "@hono/node-server": "^2.0.4",
     "hono": "^4.12.23",
     "openai": "^6.43.0"
