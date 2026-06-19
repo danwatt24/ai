@@ -1,0 +1,13 @@
+{
+  "name": "__APP_NAME__",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/index.ts"
+  },
+  "dependencies": {
+    "@repo/shared": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.2"
+  }
+}

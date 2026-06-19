@@ -1,0 +1,32 @@
+{
+  "name": "ai",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "clean": "find . \\( -name node_modules -o -name dist \\) -type d -prune -exec rm -rf '{}' + && find . -name package-lock.json -delete",
+    "create": "node tooling/create-app/index.js",
+    "ui": "npm run dev --workspace=chat-ui",
+    "server": "npm run dev --workspace=server",
+    "chatbot": "concurrently --kill-others -n server,ui -c blue,green \"npm run server\" \"npm run ui\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://https://github.com/danwatt24/ai.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/danwatt24/ai/issues"
+  },
+  "homepage": "https://github.com/danwatt24/ai#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
+  }
+}
