@@ -8,6 +8,7 @@ export default defineConfig({
     alias: {
       "@repo/shared": path.resolve(__dirname, "../../packages/shared/src"),
     },
+    tsconfigPaths: true,
   },
   plugins: [react()],
   server: {
