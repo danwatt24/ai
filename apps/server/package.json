@@ -6,8 +6,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@repo/shared": "*",
     "@hono/node-server": "^2.0.4",
+    "@huggingface/transformers": "^4.2.0",
+    "@qdrant/js-client-rest": "^1.18.0",
+    "@repo/shared": "*",
     "hono": "^4.12.23",
     "openai": "^6.43.0"
   },

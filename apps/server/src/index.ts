@@ -2,16 +2,34 @@ import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { cors } from "hono/cors";
 import { streamText } from "hono/streaming";
-import { Memory } from "./memory";
+import { ContextWindow } from "./memory/contextWindow";
+import { LLM } from "./llm";
+import { rememberTurn, VectorDb } from "./memory/vector";
+import { randomUUID } from "crypto";
+import { ChatRole } from "@repo/shared";
 
 const app = new Hono();
 app.use("*", cors());
 
+const ctxWindow = await ContextWindow.create("ctx.json");
+const llm = new LLM();
+const vectorDb = new VectorDb();
+
 app.post("/chat", async (c) => {
   return streamText(c, async (stream) => {
     const { prompt } = await c.req.json<{ prompt: string }>();
-    const resp = await Memory.getInference(prompt);
-    const tokens = resp?.split(" ") ?? [];
+
+    await ctxWindow.append({ role: ChatRole.user, content: prompt });
+    const inference = await llm.getResponse(ctxWindow.getAll());
+    await ctxWindow.append({ role: ChatRole.assistant, content: inference });
+
+    void rememberTurn(vectorDb, randomUUID(), prompt, inference).catch(
+      (err) => {
+        console.error("Failed to save turn", err);
+      },
+    );
+
+    const tokens = inference?.split(" ") ?? [];
 
     for (const token of tokens) {
       await stream.write(`${token} `);
@@ -20,7 +38,7 @@ app.post("/chat", async (c) => {
 });
 
 app.get("/context", async (c) => {
-  return c.json(Memory.getContext());
+  return c.json(ctxWindow.getAll());
 });
 
 serve({
