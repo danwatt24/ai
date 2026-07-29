@@ -13,29 +13,28 @@ type MemoryRecord = {
 
 export class VectorDb {
   private readonly _db: QdrantClient;
-  private readonly _collections: Set<string>;
+  private readonly _collection = "general";
 
   constructor() {
     this._db = new QdrantClient({ url: "http://127.0.0.1:6333" });
-    this._collections = new Set();
   }
 
-  private async ensureCollection(name: string) {
-    if (this._collections.has(name)) return;
+  async init() {
+    await this.createCollectionIfNeeded(this._collection);
+  }
+
+  private async createCollectionIfNeeded(name: string) {
     try {
       await this._db.getCollection(name);
     } catch {
       await this._db.createCollection(name, {
         vectors: { size: 384, distance: "Cosine" },
       });
-      this._collections.add(name);
     }
   }
 
   async upsert(record: MemoryRecord, vector: number[]) {
-    await this.ensureCollection("general");
-
-    const resp = await this._db.upsert("general", {
+    const resp = await this._db.upsert(this._collection, {
       points: [{ id: record.id, vector, payload: record }],
     });
     if (resp.status !== "completed") {

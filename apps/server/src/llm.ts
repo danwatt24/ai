@@ -1,6 +1,5 @@
 import OpenAI from "openai";
 import type { ChatMessage } from "@repo/shared";
-import type { ChatCompletionMessageParam } from "openai/resources";
 
 interface ChatPayload {
   systemPrompt: string;

@@ -14,6 +14,7 @@ app.use("*", cors());
 const ctxWindow = await ContextWindow.create("ctx.json");
 const llm = new LLM();
 const vectorDb = new VectorDb();
+await vectorDb.init();
 
 app.post("/chat", async (c) => {
   return streamText(c, async (stream) => {
