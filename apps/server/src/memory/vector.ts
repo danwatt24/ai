@@ -1,14 +1,20 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
 import { ChatRole } from "@repo/shared";
-import { randomUUID } from "crypto";
 import { embedder } from "./embedder";
 
-type MemoryRecord = {
+type Interaction = {
   id: string;
   role: ChatRole;
   content: string;
+};
+
+type MemoryRecord = Interaction & {
   turnId: string;
   createdAt: string;
+};
+
+type MemorySearchResult = MemoryRecord & {
+  score: number;
 };
 
 export class VectorDb {
@@ -54,6 +60,19 @@ export class VectorDb {
     }));
   }
 
+  async search(vector: number[], limit = 5): Promise<MemorySearchResult[]> {
+    const results = await this._db.search(this._collection, {
+      vector,
+      limit,
+      with_payload: true,
+    });
+
+    return results.map((r) => ({
+      ...(r.payload as MemoryRecord),
+      score: r.score,
+    }));
+  }
+
   async purge() {
     const result = await this._db.getCollections();
     await Promise.allSettled(
@@ -65,23 +84,17 @@ export class VectorDb {
 export async function rememberTurn(
   vectorDb: VectorDb,
   turnId: string,
-  prompt: string,
-  inference: string,
+  interactions: Interaction[],
 ) {
   const createdAt = new Date().toISOString();
 
-  const turn = [
-    { role: ChatRole.user, content: prompt },
-    { role: ChatRole.assistant, content: inference },
-  ];
-
   await Promise.all(
-    turn.map(async (item) => {
+    interactions.map(async (item) => {
       const embedding = await embedder.embed(item.content);
 
       await vectorDb.upsert(
         {
-          id: randomUUID(),
+          id: item.id,
           role: item.role,
           content: item.content,
           turnId,
@@ -91,4 +104,13 @@ export async function rememberTurn(
       );
     }),
   );
+}
+
+export async function recallSimilar(
+  vectorDb: VectorDb,
+  prompt: string,
+  limit = 5,
+) {
+  const embedding = await embedder.embed(prompt);
+  return vectorDb.search(embedding, limit);
 }

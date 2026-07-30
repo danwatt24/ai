@@ -10,10 +10,12 @@
     "@huggingface/transformers": "^4.2.0",
     "@qdrant/js-client-rest": "^1.18.0",
     "@repo/shared": "*",
+    "better-sqlite3": "^13.0.2",
     "hono": "^4.12.23",
     "openai": "^6.43.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^24.12.2"
   }
 }
