@@ -19,6 +19,11 @@ type MessageRow = {
   created_at: string;
 };
 
+export type RecalledMemory = {
+  turnId: string;
+  messages: ChatMessage[];
+};
+
 export class ContextWindow {
   private _db: DbType;
 
@@ -61,7 +66,40 @@ export class ContextWindow {
     }));
   }
 
-  getMessages(): ChatMessage[] {
-    return this.getAll().map(({ role, content }) => ({ role, content }));
+  getMessages(limit?: number): ChatMessage[] {
+    let msgs = this.getAll();
+    if (limit) msgs = msgs.slice(-limit);
+    return msgs.map(({ role, content }) => ({ role, content }));
+  }
+
+  getMemories(ids: string[]): RecalledMemory[] {
+    if (ids.length === 0) return [];
+
+    const memories = new Map<string, ChatMessage[]>();
+    this._db
+      .prepare<[string], MessageRow>(
+        `select id, turn_id, role, content, created_at
+        from messages
+        where turn_id in (
+          select distinct turn_id
+          from messages
+          where id in (
+            select value from json_each(?)
+          )
+        )
+        order by sequence asc`,
+      )
+      .all(JSON.stringify(ids))
+      .forEach((row) => {
+        if (!memories.has(row.turn_id)) memories.set(row.turn_id, []);
+        memories
+          .get(row.turn_id)
+          ?.push({ role: row.role, content: row.content });
+      });
+
+    return [...memories.entries()].map(([turnId, messages]) => ({
+      turnId,
+      messages,
+    }));
   }
 }

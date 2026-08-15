@@ -1,6 +1,6 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
+import { pipeline } from "@huggingface/transformers";
 import { ChatRole } from "@repo/shared";
-import { embedder } from "./embedder";
 
 type Interaction = {
   id: string;
@@ -15,6 +15,16 @@ type MemoryRecord = Interaction & {
 
 type MemorySearchResult = MemoryRecord & {
   score: number;
+};
+
+const extractor = await pipeline(
+  "feature-extraction",
+  "../../../../models/bge-small-en-v1.5",
+);
+
+const embed = async (text: string) => {
+  const output = await extractor(text, { pooling: "mean", normalize: true });
+  return Array.from(output.data) as number[];
 };
 
 export class VectorDb {
@@ -60,11 +70,18 @@ export class VectorDb {
     }));
   }
 
-  async search(vector: number[], limit = 5): Promise<MemorySearchResult[]> {
+  async search(
+    prompt: string,
+    limit = 5,
+    threshold = 0.55,
+  ): Promise<MemorySearchResult[]> {
+    const vector = await embed(prompt);
+
     const results = await this._db.search(this._collection, {
       vector,
       limit,
       with_payload: true,
+      score_threshold: threshold,
     });
 
     return results.map((r) => ({
@@ -90,7 +107,7 @@ export async function rememberTurn(
 
   await Promise.all(
     interactions.map(async (item) => {
-      const embedding = await embedder.embed(item.content);
+      const embedding = await embed(item.content);
 
       await vectorDb.upsert(
         {
@@ -104,13 +121,4 @@ export async function rememberTurn(
       );
     }),
   );
-}
-
-export async function recallSimilar(
-  vectorDb: VectorDb,
-  prompt: string,
-  limit = 5,
-) {
-  const embedding = await embedder.embed(prompt);
-  return vectorDb.search(embedding, limit);
 }

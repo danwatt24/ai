@@ -3,8 +3,8 @@ import { serve } from "@hono/node-server";
 import { cors } from "hono/cors";
 import { streamText } from "hono/streaming";
 import { ContextWindow } from "./memory/contextWindow";
-import { LLM } from "./llm";
-import { recallSimilar, rememberTurn, VectorDb } from "./memory/vector";
+import { getSystemPrompt, LLM } from "./llm";
+import { rememberTurn, VectorDb } from "./memory/vector";
 import { randomUUID } from "crypto";
 import { ChatRole } from "@repo/shared";
 
@@ -22,11 +22,17 @@ app.post("/chat", async (c) => {
     const { prompt } = await c.req.json<{ prompt: string }>();
     const turnId = randomUUID();
 
+    const similar = await vectorDb.search(prompt);
+    const memories = ctxWindow.getMemories(similar.map((s) => s.id));
+
     const promptId = ctxWindow.append(turnId, {
       role: ChatRole.user,
       content: prompt,
     });
-    const inference = await llm.getResponse(ctxWindow.getMessages());
+    const inference = await llm.getResponse([
+      getSystemPrompt(memories),
+      ...ctxWindow.getMessages(1),
+    ]);
     const responseId = ctxWindow.append(turnId, {
       role: ChatRole.assistant,
       content: inference,
@@ -57,7 +63,7 @@ app.post("/memory/search", async (c) => {
     limit?: number;
   }>();
 
-  return c.json(await recallSimilar(vectorDb, prompt, limit));
+  return c.json(await vectorDb.search(prompt, limit));
 });
 
 serve({
