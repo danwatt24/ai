@@ -59,6 +59,11 @@ export class VectorDb {
     }
   }
 
+  async remember(record: MemoryRecord) {
+    const vector = await embed(record.content);
+    await this.upsert(record, vector);
+  }
+
   async get(collectionName: string, ...vectorIds: string[]) {
     const results = await this._db.retrieve(collectionName, {
       ids: vectorIds,
@@ -96,29 +101,4 @@ export class VectorDb {
       result.collections.map((col) => this._db.deleteCollection(col.name)),
     );
   }
-}
-
-export async function rememberTurn(
-  vectorDb: VectorDb,
-  turnId: string,
-  interactions: Interaction[],
-) {
-  const createdAt = new Date().toISOString();
-
-  await Promise.all(
-    interactions.map(async (item) => {
-      const embedding = await embed(item.content);
-
-      await vectorDb.upsert(
-        {
-          id: item.id,
-          role: item.role,
-          content: item.content,
-          turnId,
-          createdAt,
-        },
-        embedding,
-      );
-    }),
-  );
 }

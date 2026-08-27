@@ -1,23 +1,6 @@
-import Database, { type Database as DbType } from "better-sqlite3";
-import { randomUUID } from "crypto";
-import type { ChatMessage, ChatRole } from "@repo/shared";
-
-const schema = `create table if not exists messages (
-  sequence integer primary key autoincrement,
-  id text unique not null,
-  turn_id text not null,
-  role text not null,
-  content text not null,
-  created_at text not null
-);`;
-
-type MessageRow = {
-  id: string;
-  turn_id: string;
-  role: ChatRole;
-  content: string;
-  created_at: string;
-};
+import type { ChatMessage } from "@repo/shared";
+import { RelationalDb } from "./rdb";
+import { VectorDb } from "./vector";
 
 export type RecalledMemory = {
   turnId: string;
@@ -25,45 +8,21 @@ export type RecalledMemory = {
 };
 
 export class MemoryStore {
-  private _db: DbType;
+  private constructor(
+    private readonly _rdb: RelationalDb,
+    private readonly _vectorDb: VectorDb,
+  ) {}
 
-  constructor() {
-    this._db = new Database(":memory:");
-    this._db.prepare(schema).run();
+  get debugVectorDb() {
+    return this._vectorDb;
   }
 
   append(turnId: string, msg: ChatMessage) {
-    const row = {
-      id: randomUUID(),
-      turnId,
-      createdAt: new Date().toISOString(),
-      ...msg,
-    };
-
-    this._db
-      .prepare<
-        [string, string, ChatRole, string, string]
-      >("insert into messages (id, turn_id, role, content, created_at) values (?, ?, ?, ?, ?)")
-      .run(row.id, row.turnId, row.role, row.content, row.createdAt);
-
-    return row.id;
+    return this._rdb.insertMessage(turnId, msg);
   }
 
   getAll() {
-    const rows = this._db
-      .prepare<
-        [],
-        MessageRow
-      >("select id, turn_id, role, content, created_at from messages order by sequence asc")
-      .all();
-
-    return rows.map((row) => ({
-      id: row.id,
-      turnId: row.turn_id,
-      role: row.role,
-      content: row.content,
-      createdAt: row.created_at,
-    }));
+    return this._rdb.getMessages();
   }
 
   getMessages(limit?: number): ChatMessage[] {
@@ -73,33 +32,46 @@ export class MemoryStore {
   }
 
   getMemories(ids: string[]): RecalledMemory[] {
-    if (ids.length === 0) return [];
-
+    const rows = this._rdb.getTurnsByMessageIds(ids);
     const memories = new Map<string, ChatMessage[]>();
-    this._db
-      .prepare<[string], MessageRow>(
-        `select id, turn_id, role, content, created_at
-        from messages
-        where turn_id in (
-          select distinct turn_id
-          from messages
-          where id in (
-            select value from json_each(?)
-          )
-        )
-        order by sequence asc`,
-      )
-      .all(JSON.stringify(ids))
-      .forEach((row) => {
-        if (!memories.has(row.turn_id)) memories.set(row.turn_id, []);
-        memories
-          .get(row.turn_id)
-          ?.push({ role: row.role, content: row.content });
-      });
+
+    rows.forEach((row) => {
+      if (!memories.has(row.turnId)) memories.set(row.turnId, []);
+      memories.get(row.turnId)?.push({ role: row.role, content: row.content });
+    });
 
     return [...memories.entries()].map(([turnId, messages]) => ({
       turnId,
       messages,
     }));
+  }
+
+  async rememberTurn(turnId: string) {
+    const messages = this._rdb.getTurn(turnId);
+
+    await Promise.all(
+      messages.map((msg) =>
+        this._vectorDb.remember({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          turnId: msg.turnId,
+          createdAt: msg.createdAt,
+        }),
+      ),
+    );
+  }
+
+  async recall(query: string, limit: number = 5) {
+    const similar = await this._vectorDb.search(query, limit);
+    return this.getMemories(similar.map((s) => s.id));
+  }
+
+  static async create() {
+    const rdb = new RelationalDb();
+    const vectorDb = new VectorDb();
+    await vectorDb.init();
+
+    return new MemoryStore(rdb, vectorDb);
   }
 }
