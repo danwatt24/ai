@@ -1,8 +1,7 @@
 import { ChatRole, type ChatMessage } from "@repo/shared";
-export type { RecalledMemory } from "../memory/memoryStore";
 import { parseToolCall, recallTooling } from "./toolParser";
 import { model } from "./model";
-import type { MemoryStore, RecalledMemory } from "../memory/memoryStore";
+import type { MemoryStore, RecalledMemory } from "../memory";
 import type { ChatCompletionMessage } from "openai/resources";
 import { ContextWindow } from "./contextWindow";
 

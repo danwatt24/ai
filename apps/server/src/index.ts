@@ -2,40 +2,19 @@ import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { cors } from "hono/cors";
 import { streamText } from "hono/streaming";
-import { LLM } from "./llm";
-import { randomUUID } from "crypto";
-import { ChatRole } from "@repo/shared";
-import { MemoryStore } from "./memory";
+import { Session } from "./session";
 
 const app = new Hono();
 app.use("*", cors());
 
-const memoryStore = await MemoryStore.create();
-const llm = new LLM(memoryStore);
+const session = await Session.create();
 
 app.post("/chat", async (c) => {
   return streamText(c, async (stream) => {
     const { prompt } = await c.req.json<{ prompt: string }>();
-    const turnId = randomUUID();
-
-    const userPrompt = {
-      role: ChatRole.user,
-      content: prompt,
-    };
-    memoryStore.append(turnId, userPrompt);
-
-    const inference = await llm.getResponse(userPrompt);
-    memoryStore.append(turnId, {
-      role: ChatRole.assistant,
-      content: inference,
-    });
-
-    void memoryStore.rememberTurn(turnId).catch((err) => {
-      console.error("Failed to save turn", err);
-    });
+    const inference = await session.send(prompt);
 
     const tokens = inference?.split(" ") ?? [];
-
     for (const token of tokens) {
       await stream.write(`${token} `);
     }
@@ -43,7 +22,7 @@ app.post("/chat", async (c) => {
 });
 
 app.get("/context", async (c) => {
-  return c.json(memoryStore.getAll());
+  return c.json(session.debugContext());
 });
 
 app.post("/memory/search", async (c) => {
@@ -52,7 +31,7 @@ app.post("/memory/search", async (c) => {
     limit?: number;
   }>();
 
-  return c.json(await memoryStore.debugVectorDb.search(prompt, limit));
+  return c.json(await session.debugSearch(prompt, limit));
 });
 
 serve({
