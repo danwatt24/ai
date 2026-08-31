@@ -2,7 +2,8 @@
   "name": "ai",
   "private": true,
   "workspaces": [
-    "apps/*",
+    "apps/chat-ui",
+    "apps/server",
     "packages/*"
   ],
   "scripts": {
@@ -27,9 +28,37 @@
     "url": "https://github.com/danwatt24/ai/issues"
   },
   "homepage": "https://github.com/danwatt24/ai#readme",
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@hono/node-server": "^2.0.4",
+    "@huggingface/transformers": "^4.2.0",
+    "@mui/icons-material": "^9.0.1",
+    "@mui/material": "^9.0.0",
+    "@qdrant/js-client-rest": "^1.18.0",
+    "@repo/shared": "*",
+    "better-sqlite3": "^13.0.2",
+    "hono": "^4.12.23",
+    "openai": "^6.43.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-markdown": "^10.1.0"
+  },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^24.12.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
     "concurrently": "^9.2.1",
+    "eslint": "^10.2.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.5.0",
     "tsx": "^4.22.3",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2",
+    "typescript-eslint": "^8.58.2",
+    "vite": "^8.0.10"
   }
 }
