@@ -3,6 +3,8 @@ import { randomUUID } from "crypto";
 import { LLM } from "./llm";
 import { MemoryStore } from "./memory";
 
+export { emit, subscribe } from "./events";
+
 export class Session {
   private _memStore: MemoryStore;
   private _llm: LLM;

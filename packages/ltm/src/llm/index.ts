@@ -4,6 +4,7 @@ import { model } from "./model";
 import type { MemoryStore, RecalledMemory } from "../memory";
 import type { ChatCompletionMessage } from "openai/resources";
 import { ContextWindow } from "./contextWindow";
+import { emit } from "../events";
 
 export class LLM {
   private _memStore: MemoryStore;
@@ -31,18 +32,33 @@ export class LLM {
       );
 
       if (!toolCall) {
-        console.log("[llm] answered without tool call");
+        emit({ type: "llm.answer", log: "[llm] answered without tool call" });
         return output.content ?? "";
       }
 
       const tool = tools[toolCall.name];
       if (!tool) {
+        emit({
+          type: "llm.tool_requested",
+          log: `[llm] requested invalid tool "${toolCall.name}"`,
+        });
         return `The model requested an unsupported tool: ${toolCall.name}`;
       }
 
+      emit({
+        type: "llm.tool_requested",
+        tool: toolCall,
+        log: `[llm] requested tool ${toolCall.name}`,
+      });
 
       const memories = await tool.execute(toolCall, this._memStore);
       console.log(`[memory] recalled ${memories.length} turn(s)`);
+
+      emit({
+        type: "memory.recalled",
+        count: memories.length,
+        log: `[memory] recalled ${memories.length} turn(s)`,
+      });
 
       window
         .add({
