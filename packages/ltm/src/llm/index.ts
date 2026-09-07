@@ -1,5 +1,5 @@
 import { ChatRole, type ChatMessage } from "@repo/shared";
-import { parseToolCall, recallTooling } from "./toolParser";
+import { parseToolCall, schemas, tools } from "../tools";
 import { model } from "./model";
 import type { MemoryStore, RecalledMemory } from "../memory";
 import type { ChatCompletionMessage } from "openai/resources";
@@ -16,7 +16,7 @@ export class LLM {
       model.getSystemPrompt(),
       prompt,
     ]);
-    const output = await model.getResponse(window.build(), recallTooling);
+    const output = await model.getResponse(window.build(), schemas);
     return await this.resolveInference(output, window);
   }
 
@@ -35,18 +35,14 @@ export class LLM {
         return output.content ?? "";
       }
 
-      console.log(
-        `[llm] requested tool "${toolCall.name}" with query "${toolCall.arguments.query}"`,
-      );
+      const tool = tools[toolCall.name];
+      if (!tool) {
+        return `The model requested an unsupported tool: ${toolCall.name}`;
+      }
 
-      const memories = await this._memStore.recall(
-        toolCall.arguments.query,
-        toolCall.arguments.limit,
-      );
 
-      console.log(
-        `[memory] recalled ${memories.length} turn(s) for query "${toolCall.arguments.query}"`,
-      );
+      const memories = await tool.execute(toolCall, this._memStore);
+      console.log(`[memory] recalled ${memories.length} turn(s)`);
 
       window
         .add({
@@ -57,7 +53,7 @@ export class LLM {
           role: ChatRole.user,
           content: `<tool_response name="${toolCall.name}">\n${formatToolResult(memories)}\n</tool_response>`,
         });
-      output = await model.getResponse(window.build(), recallTooling);
+      output = await model.getResponse(window.build(), schemas);
     }
     return "Too many tool call requests";
   }

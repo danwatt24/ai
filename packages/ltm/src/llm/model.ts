@@ -10,13 +10,13 @@ const _openai = new OpenAI({
 });
 
 export const model = {
-  async getResponse(messages: ChatMessage[], tooling: ChatCompletionTool) {
+  async getResponse(messages: ChatMessage[], tooling: ChatCompletionTool[]) {
     const output = await _openai.chat.completions.create({
       model: modelName,
       messages,
       temperature: 0.3,
       tool_choice: "auto",
-      tools: [tooling],
+      tools: tooling,
     });
     return output.choices[0].message;
   },

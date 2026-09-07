@@ -1,5 +1,5 @@
-import type { ChatMessage } from "@repo/shared";
-import { RelationalDb } from "./rdb";
+import type { ChatMessage, ChatRole } from "@repo/shared";
+import { RelationalDb, type StoredMessage } from "./rdb";
 import { VectorDb } from "./vector";
 
 export type RecalledMemory = {
@@ -62,7 +62,7 @@ export class MemoryStore {
     );
   }
 
-  async recall(query: string, limit: number = 5) {
+  async semanticRecall(query: string, limit: number = 5) {
     const similar = await this._vectorDb.search(query, limit);
     return this.getMemories(similar.map((s) => s.id));
   }
