@@ -26,14 +26,24 @@ export class LLM {
     window: ContextWindow,
   ) {
     for (let i = 0; i < 3; i++) {
-      const toolCall = parseToolCall(
+      const parsed = parseToolCall(
         output.tool_calls?.filter((f) => f.type === "function"),
         output.content,
       );
 
-      if (!toolCall) {
+      if (!parsed) {
         emit({ type: "llm.answer", log: "[llm] answered without tool call" });
         return output.content ?? "";
+      }
+
+      const { toolCall, progress } = parsed;
+
+      if (progress) {
+        emit({
+          type: "llm.progress",
+          content: progress,
+          log: progress,
+        });
       }
 
       const tool = tools[toolCall.name];
@@ -52,8 +62,6 @@ export class LLM {
       });
 
       const memories = await tool.execute(toolCall, this._memStore);
-      console.log(`[memory] recalled ${memories.length} turn(s)`);
-
       emit({
         type: "memory.recalled",
         count: memories.length,

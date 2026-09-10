@@ -96,6 +96,25 @@ export class RelationalDb {
 
     return rows.map(toStoredMessage);
   }
+
+  getMessagesBefore(activeTurnId: string, limit: number, role?: ChatRole) {
+    const roleClause = role ? `and role = '${role}'` : "";
+    const query = `select id, turn_id, role, content, created_at
+        from messages
+        where sequence < (
+          select min(sequence)
+          from messages
+          where turn_id = ?
+        )
+        ${roleClause}
+        order by sequence desc
+        limit ?`;
+    const rows = this._db
+      .prepare<[string, number], MessageRow>(query)
+      .all(activeTurnId, limit);
+
+    return rows.map(toStoredMessage);
+  }
 }
 
 function toStoredMessage(row: MessageRow): StoredMessage {

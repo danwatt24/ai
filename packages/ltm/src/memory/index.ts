@@ -8,6 +8,8 @@ export type RecalledMemory = {
 };
 
 export class MemoryStore {
+  private _activeTurnId?: string;
+
   private constructor(
     private readonly _rdb: RelationalDb,
     private readonly _vectorDb: VectorDb,
@@ -17,7 +19,12 @@ export class MemoryStore {
     return this._vectorDb;
   }
 
+  get activeTurnId() {
+    return this._activeTurnId;
+  }
+
   append(turnId: string, msg: ChatMessage) {
+    this._activeTurnId = turnId;
     return this._rdb.insertMessage(turnId, msg);
   }
 
@@ -65,6 +72,23 @@ export class MemoryStore {
   async semanticRecall(query: string, limit: number = 5) {
     const similar = await this._vectorDb.search(query, limit);
     return this.getMemories(similar.map((s) => s.id));
+  }
+
+  recencyRecall(
+    activeTurnId?: string,
+    role?: string,
+    limit: number = 5,
+  ): RecalledMemory[] {
+    if (!activeTurnId) return [];
+    const memories = this._rdb.getMessagesBefore(
+      activeTurnId,
+      limit,
+      role as ChatRole,
+    );
+    return [...memories].map(({ role, turnId, content }) => ({
+      turnId,
+      messages: [{ role, content }],
+    }));
   }
 
   static async create() {

@@ -14,3 +14,10 @@ export const basicSemanticRecall: Scenario = {
   ],
   expectation: "Second response should recall the first question.",
 };
+
+export const vagueChronologicalRecall: Scenario = {
+  name: "vague chronological recall",
+  prompts: ["What kind of model are you?", "What was my last question?"],
+  expectation:
+    "The final response should identify the SQLite question, but semantic recall may fail without chronological tooling.",
+};

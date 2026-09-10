@@ -1,9 +1,11 @@
+import { recencyRecall } from "./recencyRecall";
 import { semanticRecall } from "./semanticRecall";
 import type { LtmTool } from "./types";
 
 export { parseToolCall } from "./toolParser";
 
 export const tools: Record<string, LtmTool> = {
+  [recencyRecall.name]: recencyRecall,
   [semanticRecall.name]: semanticRecall,
 };
 
