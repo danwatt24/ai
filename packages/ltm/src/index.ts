@@ -8,6 +8,7 @@ export { emit, subscribe } from "./events";
 export class Session {
   private _memStore: MemoryStore;
   private _llm: LLM;
+  private _writing?: Promise<void>;
 
   private constructor(memStore: MemoryStore, llm: LLM) {
     this._memStore = memStore;
@@ -29,7 +30,7 @@ export class Session {
       content: inference,
     });
 
-    void this._memStore.rememberTurn(turnId).catch((err) => {
+    this._writing = this._memStore.rememberTurn(turnId).catch((err) => {
       console.error("Failed to save turn", err);
     });
 
@@ -42,6 +43,10 @@ export class Session {
 
   debugSearch(prompt: string, limit?: number) {
     return this._memStore.debugVectorDb.search(prompt, limit);
+  }
+
+  async waitForIdle() {
+    return await this._writing;
   }
 
   static async create() {
