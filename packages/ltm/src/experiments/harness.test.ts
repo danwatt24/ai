@@ -1,20 +1,18 @@
 import { QdrantClient } from "@qdrant/js-client-rest";
 import { Session, subscribe } from "..";
 import type { LtmEvent } from "../events";
-import { basicSemanticRecall, vagueChronologicalRecall } from "./scenarios";
-import { describe, expect, test, afterAll, beforeAll } from "vitest";
 
-const scenarios = [basicSemanticRecall, vagueChronologicalRecall];
+type Step = { input: string; toolsCalled?: string[] };
 
 const qdrant = new QdrantClient({ url: "http://127.0.0.1:6333" });
+const ltmEvents: LtmEvent[] = [];
+const timeout = 120_000;
 
 describe("memory recall experiments", () => {
-  const events: LtmEvent[] = [];
-
   let unsub: () => void;
   beforeAll(() => {
     unsub = subscribe((e) => {
-      events.push(e);
+      ltmEvents.push(e);
       // if (e.log) console.log(e.log);
     });
   });
@@ -23,39 +21,89 @@ describe("memory recall experiments", () => {
     unsub();
   });
 
-  for (const scenario of scenarios) {
-    let response = "";
-    test(
-      scenario.name,
-      async () => {
-        await qdrant.deleteCollection("general").catch(() => {});
-        const session = await Session.create();
+  let _session: Session;
+  beforeEach(async () => {
+    await qdrant.deleteCollection("general").catch(() => {});
+    _session = await Session.create();
+  });
 
-        for (const step of scenario.prompts) {
-          events.length = 0;
+  test(
+    "no tool needed",
+    async () => {
+      const steps: Step[] = [
+        { input: "What kind of model are you?" },
+        { input: "How many grams are in a pound?" },
+      ];
 
-          response = await session.send(step.input);
-          console.log(
-            JSON.stringify(
-              {
-                input: step.input,
-                events: events.map(({ log: raw, ...others }) => others),
-                response,
-              },
-              null,
-              2,
-            ),
-          );
+      for (const step of steps) await runStep(_session, step);
+    },
+    timeout,
+  );
 
-          await session.waitForIdle();
-          const toolsCalled = events
-            .filter((e) => e.type === "llm.tool_requested")
-            .map((e) => e.tool?.name);
+  test(
+    "direct topic recall",
+    async () => {
+      const steps: Step[] = [
+        { input: "What kind of model are you?" },
+        {
+          input: "What did I ask earlier about your model?",
+          toolsCalled: ["semantic_recall"],
+        },
+      ];
+      for (const step of steps) await runStep(_session, step);
+    },
+    timeout,
+  );
 
-          expect(toolsCalled).toEqual(step.toolCalls ?? []);
-        }
-      },
-      120_000,
-    );
-  }
+  test(
+    "vague chronological recall",
+    async () => {
+      const steps: Step[] = [
+        { input: "What kind of model are you?" },
+        {
+          input: "What was my last question?",
+          toolsCalled: ["recency_recall"],
+        },
+      ];
+      for (const step of steps) await runStep(_session, step);
+    },
+    timeout,
+  );
+
+  test(
+    "ambiguous reference recall",
+    async () => {
+      const steps: Step[] = [
+        { input: "What subaru would you recommend for bad weather?" },
+        {
+          input: "Why did you choose that one?",
+          toolsCalled: ["recency_recall"],
+        },
+      ];
+      for (const step of steps) await runStep(_session, step);
+    },
+    timeout,
+  );
 });
+
+async function runStep(session: Session, step: Step) {
+  ltmEvents.length = 0;
+  const response = await session.send(step.input);
+  console.log(
+    JSON.stringify(
+      {
+        input: step.input,
+        events: ltmEvents.map(({ log: raw, ...others }) => others),
+        response,
+      },
+      null,
+      2,
+    ),
+  );
+
+  await session.waitForIdle();
+  const toolsCalled = ltmEvents
+    .filter((e) => e.type === "llm.tool_requested")
+    .map((e) => e.tool?.name);
+  expect(toolsCalled).toEqual(step.toolsCalled ?? []);
+}
