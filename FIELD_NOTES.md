@@ -6,8 +6,9 @@ and which experiments should come next.
 
 ## Current Checkpoint
 
-- The active model context is intentionally tiny: system prompt, current prompt,
-  tool calls, and tool results.
+- The current implementation uses a tiny active context: system prompt, current
+  prompt, tool calls, and tool results. This remains a useful recall test bed,
+  but is no longer assumed to be the final context policy.
 - SQLite is the source of truth for remembered message chronology.
 - Qdrant is a semantic lookup projection over remembered messages.
 - The model can choose between `semantic_recall` and `recency_recall`.
@@ -16,6 +17,29 @@ and which experiments should come next.
 - The live experiment harness now runs through Vitest.
 - Scenario steps can assert expected tool-call sequences.
 - `Session.waitForIdle()` lets experiments wait for background memory writes.
+
+## Current Direction
+
+- Preserve every raw interaction. Retention is exhaustive even though recall is
+  intentionally selective.
+- Grow an active conversation context until a topic, time, manual, or token
+  boundary starts a new segment.
+- Run implicit recall before inference so the main model is not solely
+  responsible for recognizing that its visible context is incomplete.
+- Keep explicit recall tools available when implicit recall is insufficient or
+  the user asks for deeper historical reasoning.
+- Use a small model with task-specific instruction sets for jobs such as recall
+  query expansion and eventual topic-boundary classification.
+- Treat recalled memories as optional background context rather than current
+  instructions or guaranteed conversation chronology.
+- Record which existing memories were retrieved and injected for each turn by
+  ID, without duplicating their content.
+- Recall should provide a useful sample, not reconstruct all relevant history.
+  Query expansion may intentionally seek direct, contradictory, and lateral or
+  orthogonal memories so retrieval does not become an echo chamber.
+- The graph remains a future relationship layer for provenance, evolving ideas,
+  corrections, topic structures, and cross-domain associations. SQLite remains
+  the source of the original interaction text.
 
 ## Proven So Far
 
@@ -43,8 +67,8 @@ and which experiments should come next.
 
 ## Next Experiments
 
-Expand the Vitest harness with small behavior scenarios before adding new
-architecture:
+Use the Vitest harness to compare behavior as the context and recall policies
+evolve:
 
 - No recall needed: simple factual prompt should not call tools.
 - Semantic recall: prior content-specific question should call `semantic_recall`.
@@ -60,12 +84,17 @@ architecture:
   assistant mistake.
 - Preference memory: user preference should be recalled only when relevant.
 - Multi-step recall: model may need more than one tool call to answer well.
+- Growing context: ordinary follow-ups should not require recall while their
+  active segment still contains the needed history.
+- Implicit recall: a prompt whose missing context is not obvious to the main
+  model should receive useful memories before inference.
+- Diverse recall: direct, contradictory, and lateral retrieval should broaden
+  the available context without forcing irrelevant connections into the answer.
+- Topic boundary: an unrelated prompt should be able to begin a fresh active
+  segment while the prior segment remains fully recallable.
 
 ## Deferred Ideas
 
-- Preloaded recall: a cheap router or deterministic layer retrieves likely
-  context before the main model runs, while tools remain available.
-- Topic boundaries as metadata, not active context resets.
 - Topic/thread/frame recall for "back to that" style prompts.
 - Model elevation: route simple prompts to cheaper models and harder prompts to
   stronger ones.
@@ -75,5 +104,7 @@ architecture:
 
 ## Guiding Principle
 
-Do not maintain large context by default. Reconstruct the smallest useful context
-for the current prompt, and keep the reconstruction inspectable.
+Store the complete interaction history, but do not equate complete storage with
+complete recall. Maintain a useful active conversation segment, retrieve a
+small and deliberately varied set of older memories, and keep every retrieval
+and derived relationship traceable to its source interactions.
