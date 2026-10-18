@@ -2,3 +2,4 @@ dist
 node_modules/
 models/
 ctx.json
+packages/codex-ltm/debug.logs
